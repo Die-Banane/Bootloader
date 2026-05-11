@@ -27,6 +27,31 @@ clr_screen:
     pop ax
     ret
 
+
+;prints a null terminated String to the cursor position
+puts:
+    push si
+    push ax
+    push bx
+    xor bh, bh
+
+.loop:
+    lodsb
+    test al, al
+    jz .done
+    
+    mov ah, 0x0e
+    int 0x10
+
+    jmp .loop
+
+.done:
+    pop bx
+    pop ax
+    pop si
+    ret
+
+
 main:
 ;initialisation
     xor ax, ax
@@ -39,21 +64,20 @@ main:
     call clr_screen
 
 ;put msg string to the screen
-    mov ah, 0x13
-    mov al, 1
-    mov bh, 0
-    mov bl, 0x07
-    mov cx, 10
-    mov dh, 0
-    mov dl, 0
-    mov bp, msg
-    int 0x10
+    mov si, a20_msg
+    call puts
+
+    ;TODO: test and activate A20-Line 
+
+    mov si, done_msg
+    call puts
 
 .halt:
     hlt
     jmp .halt
 
-msg: db "booting..."
+a20_msg: db "activating A20-Line...", 0x0d, 0x0a, 0
+done_msg: db "done", 0x0d, 0x0a, 0
 
 times 510 - ($ - $$) db 0	;pad the file with 0
 db 0x55				;place the boot signature at byte 510 and 511
