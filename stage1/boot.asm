@@ -4,8 +4,9 @@ BITS 16
 start:
     jmp main
 
-
+;TODO: move functions to stage 2
 clr_screen:
+
 ;save state
     push ax
     push bx
@@ -27,7 +28,6 @@ clr_screen:
     pop bx
     pop ax
     ret
-
 
 ;prints a null terminated String to the cursor position
 print:
@@ -54,32 +54,44 @@ print:
     popf
     ret
 
+
 main:
+
 ;initialisation
     xor ax, ax
     mov es, ax
     mov ds, ax
-
     mov ss, ax
     mov sp, 0x7C00
-    
-    call clr_screen
 
-;put msg string to the screen
-    mov si, a20_msg
-    call print
+;chech if BIOS suppors extended mode
+    pusha
+    mov ah, 0x41
+    mov bx, 0x55AA
+    mov dl, 0x80
+    int 0x13
 
-    call enable_a20
-    call print
+    jc .error
+    cmp bx, 0xAA55
+    jne .error
+    popa
 
-.end:
+.error:
+;TODO: think of a good way to do proper error handling
+
+.halt:
     hlt
-    jmp .end
+    jmp .halt
+
+DAP:
+    .size:		db 0x10
+    .unused:		db 0
+    .sectors:		dw 4
+    .offset:		dw 0x7E00
+    .segment:		dw 0
+    .start_read:	dq 1
 
 %include "a20.asm"
 
-a20_msg: db "activating A20-Line...", 0x0d, 0x0a, 0
-
-times 510 - ($ - $$) db 0	;pad the file with 0
-db 0x55				;place the boot signature at byte 510 and 511
-db 0xAA
+times 510 - ($ - $$) db 0		;pad the file with 0
+dw 0xAA55				;place the boot signature at byte 510 and 511
