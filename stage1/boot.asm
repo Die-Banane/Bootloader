@@ -5,6 +5,8 @@ main:
 
 ;initialisation
     cli
+    jmp 0x0000:.cs_init
+.cs_init:
     xor ax, ax
     mov es, ax
     mov ds, ax
@@ -14,31 +16,36 @@ main:
 
 ;error if booting from floppy disk
     cmp dl, 0x80
-    jb .error
+    jb error
 
 ;chech if BIOS suppors extended mode
     mov ah, 0x41
     mov bx, 0x55AA
     int 0x13
 
-    jc .error
+    jc error
     cmp bx, 0xAA55
-    jne .error
+    jne error
 
     mov ah, 0x42
     mov si, DAP
     int 0x13
-    jc .error
+    jc error
 
     jmp 0x7E00
 
-.halt:
+halt:
     hlt
-    jmp .halt
+    jmp halt
 
-.error:
-    jmp .halt
+error:
+    jmp halt
 ;TODO: think of a good way to do proper error handling
+
+
+%ifdef DEBUG
+    %include "stage2/screen.asm"	;to print debug messages to the screen
+%endif
 
 DAP:
     .size:		db 0x10

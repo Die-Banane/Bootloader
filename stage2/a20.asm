@@ -3,7 +3,7 @@ enable_a20:
     cmp ax, 1
     je .done
 
-    call enable_a20_bios
+    call enable_a20_fast
     call check_a20
     cmp ax, 1
     je .done
@@ -13,19 +13,12 @@ enable_a20:
     cmp ax, 1
     je .done
 
-    call enable_a20_fast
+    call enable_a20_bios
     call check_a20
     cmp ax, 1
     je .done
-    
-    jmp .fail
-
+   
 .done:
-    mov si, a20_done_msg
-    ret
-
-.fail:
-    mov si, a20_failed_msg
     ret
 
 ;check if the a20 line is enabled, store result in ax. 1 - enabled, 0 - disabled
@@ -86,7 +79,7 @@ enable_a20_kbc:
 
     call .wait_in_buf
     mov al, 0xD0
-    out 0x64, al	;write output port to status register
+    out 0x64, al
 
     call .wait_out_buf
     in al, 0x60
@@ -106,22 +99,22 @@ enable_a20_kbc:
 .wait_in_buf:
     in al, 0x64		
     test al, 2		;mask of bit 1, wich is set if the input buffer is occupied
-    jnz .wait_out_buf
+    jnz .wait_in_buf
     ret
 
 ;output buffer must be clear before reading data from port 0x60
 .wait_out_buf:
     in al, 0x64
     test al, 1		;mask of bit 0, wich is set if the output buffer is occupied
-    jnz .wait_in_buf
+    jnz .wait_out_buf
     ret
 
 .done:
-    call .wait_out_buf
+    call .wait_in_buf
     mov al, 0xAE
     out 0x64, al
 
-    call .wait_out_buf
+    call .wait_in_buf
 
     popf
     pop ax
@@ -132,10 +125,8 @@ enable_a20_kbc:
 enable_a20_fast:
     push ax
     in al, 0x92
+    and al, 0xFE
     or al, 2
     out 0x92, al
     pop ax
     ret
-
-    a20_failed_msg: db "failed to activate A20 gate", 0x0D, 0x0A, 0
-    a20_done_msg: db "activated A20 gate", 0x0D, 0x0A, 0

@@ -4,13 +4,25 @@ BITS 16
 main:
     call clr_screen
 
-    mov si, msg
-    call print
+    call enable_a20
+    cmp ax, 1
+    jne .a20_fail
 
-.halt:
+    mov si, a20_msg
+    call print
+    jmp halt
+
+.a20_fail:
+    mov si, a20_fail_msg
+    call print
+    jmp halt
+
+halt:
     hlt
-    jmp .halt
+    jmp halt
 
 %include "stage2/screen.asm"
+%include "stage2/a20.asm"
 
-msg: db "Hello from stage2", 0x0d, 0x0a, 0
+a20_msg: db "a20 gate activated", 0x0d, 0x0a, 0
+a20_fail_msg: db "failed to activate a20 gate", 0x0d, 0x0a, 0
