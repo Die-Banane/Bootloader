@@ -42,11 +42,6 @@ error:
     jmp halt
 ;TODO: think of a good way to do proper error handling
 
-
-%ifdef DEBUG
-    %include "stage2/screen.asm"	;to print debug messages to the screen
-%endif
-
 DAP:
     .size:		db 0x10
     .unused:		db 0

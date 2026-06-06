@@ -3,17 +3,17 @@ enable_a20:
     cmp ax, 1
     je .done
 
+    call enable_a20_bios
+    call check_a20
+    cmp ax, 1
+    je .done
+
     call enable_a20_fast
     call check_a20
     cmp ax, 1
     je .done
 
     call enable_a20_kbc
-    call check_a20
-    cmp ax, 1
-    je .done
-
-    call enable_a20_bios
     call check_a20
     cmp ax, 1
     je .done

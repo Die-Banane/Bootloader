@@ -2,27 +2,34 @@ org 0x7E00
 BITS 16
 
 main:
-    call clr_screen
-
     call enable_a20
     cmp ax, 1
-    jne .a20_fail
+    jne halt ;TODO: make error function
 
-    mov si, a20_msg
-    call print
-    jmp halt
+;switch to protected mode
+    cli
+    lgdt [gdtr]
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+    or eax, 1
+    mov cr0, eax
+    jmp 0x0008:pm_main
 
-.a20_fail:
-    mov si, a20_fail_msg
-    call print
-    jmp halt
+BITS 32
+pm_main:
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov ebp, 0x90000
+    mov esp, ebp
 
 halt:
     hlt
     jmp halt
 
-%include "stage2/screen.asm"
 %include "stage2/a20.asm"
-
-a20_msg: db "a20 gate activated", 0x0d, 0x0a, 0
-a20_fail_msg: db "failed to activate a20 gate", 0x0d, 0x0a, 0
+%include "stage2/gdt.asm"
