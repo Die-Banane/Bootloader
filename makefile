@@ -1,27 +1,25 @@
-ASM	= nasm -f bin
-QEMU	= qemu-system-x86_64
-BUILD	= build
+MAKE		= make
+BUILD_DIR	= build
+SRC_DIR		= src
 
-.PHONY: all clean run
 
-all: $(BUILD)/disk.img
+all: image
 
-$(BUILD)/boot.bin: stage1/boot.asm
-	$(ASM) -o $@ stage1/boot.asm
+always:
+	mkdir -p $(BUILD_DIR)
 
-$(BUILD)/stage2.bin: stage2/main.asm stage2/a20.asm stage2/screen.asm
-	$(ASM) -o $@ stage2/main.asm
+image: always stage1 stage2
+	dd if=/dev/zero of=$(BUILD_DIR)/disk.img bs=512 count=2048
+	dd if=$(BUILD_DIR)/stage1.bin of=$(BUILD_DIR)/disk.img bs=512 conv=notrunc seek=0
+	dd if=$(BUILD_DIR)/stage2.bin of=$(BUILD_DIR)/disk.img bs=512 conv=notrunc seek=1
 
-$(BUILD)/disk.img: $(BUILD)/boot.bin $(BUILD)/stage2.bin
-	dd if=/dev/zero of=$(BUILD)/disk.img bs=512 count=2048
-	dd if=$(BUILD)/boot.bin of=$(BUILD)/disk.img bs=512 seek=0 conv=notrunc
-	dd if=$(BUILD)/stage2.bin of=$(BUILD)/disk.img bs=512 seek=1 conv=notrunc
+stage1: always
+	$(MAKE) -C $(SRC_DIR)/stage1 BUILD_DIR=$(abspath $(BUILD_DIR))
 
-run: $(BUILD)/disk.img
-	$(QEMU) -drive file=$(BUILD)/disk.img,format=raw,if=ide,index=0,media=disk
-
-debug: ASM += -dDEBUG
-debug: $(BUILD)/disk.img
+stage2: always
+	$(MAKE) -C $(SRC_DIR)/stage2 BUILD_DIR=$(abspath $(BUILD_DIR)) ROOT=$(abspath ./)
 
 clean:
-	rm -f $(BUILD)/*
+	rm -rf $(BUILD_DIR)/*
+
+.PHONY: all clean always stage1 stage2

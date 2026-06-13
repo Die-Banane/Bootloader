@@ -1,6 +1,8 @@
+BITS 16
+
 gdtr:
     dw (.gdt_end - .gdt_start) + 8 - 1
-    dd .gdt_start - 8
+    dd .gdt_start - 8	;subtract 8 to place the pointer one entry before the code entry (null descriptor)
 
 .gdt_start:
     .code:

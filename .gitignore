@@ -1,2 +1,6 @@
-floppy.img
-main.bin
+*.o
+*.elf
+*.bin
+*.img
+
+build/

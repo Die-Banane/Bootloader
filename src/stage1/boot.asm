@@ -45,7 +45,7 @@ error:
 DAP:
     .size:		db 0x10
     .unused:		db 0
-    .sectors:		dw 4
+    .sectors:		dw 16
     .offset:		dw 0x7E00
     .segment:		dw 0
     .start_sector:	dq 1

@@ -1,3 +1,5 @@
+BITS 16
+
 enable_a20:
     call check_a20
     cmp ax, 1
