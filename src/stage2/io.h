@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#define ROWS 25
+#define COLS 80
 
 enum colors {
     BLACK,
@@ -22,3 +24,4 @@ enum colors {
 };
 
 void Puts(int x, int y, uint8_t foreground, uint8_t background, const char *msg);
+void ClearScreen(void);
