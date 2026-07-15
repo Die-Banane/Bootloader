@@ -1,20 +1,33 @@
 BITS 16
 
 extern c_main
-global stage2_entry
+global entry
 
-stage2_entry:
+section .data
+ebda_start: dd 0
+boot_drive: dw 0	;16 bit for alignment
+
+section .text
+entry:
+    pop [boot_drive]
+   
+;get the starting address of EBDA
+    xor eax, eax
+    int 0x12
+    shl eax, 10
+    mov [ebda_start], eax
+    
     call enable_a20
     cmp ax, 1
-    jne halt ;TODO: make error function
+    jne halt 		;TODO: make error function
 
-;switch to protected mode
     cli
     lgdt [gdtr]
     mov eax, cr0
     or eax, 1
     mov cr0, eax
-    jmp 0x0008:pm_entry
+
+    jmp 0x08:pm_entry
 
 halt:
     hlt
@@ -28,12 +41,9 @@ pm_entry:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov ebp, 0x90000
-    mov esp, ebp
+    mov esp, [ebda_start]
 
-    mov al, 'A'
-    mov ah, 0x0f
-    mov [0xb8000], ax
+    push word [boot_drive]
     call c_main
 
 pm_halt:

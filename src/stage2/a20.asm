@@ -1,5 +1,6 @@
 BITS 16
 
+section .text
 enable_a20:
     call check_a20
     cmp ax, 1

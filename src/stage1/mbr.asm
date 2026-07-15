@@ -2,7 +2,6 @@ org 0x7C00
 BITS 16
 
 main:
-
 ;initialisation
     cli
     jmp 0x0000:.cs_init
@@ -14,11 +13,13 @@ main:
     mov sp, 0x7C00
     sti
 
+    mov [boot_drive], dl	;save bootdrive
+
 ;error if booting from floppy disk
     cmp dl, 0x80
     jb error
 
-;chech if BIOS suppors extended mode
+;chech if BIOS supports extended mode
     mov ah, 0x41
     mov bx, 0x55AA
     int 0x13
@@ -27,12 +28,15 @@ main:
     cmp bx, 0xAA55
     jne error
 
+    mov dl, [boot_drive]
     mov ah, 0x42
     mov si, DAP
     int 0x13
     jc error
 
-    jmp 0x7E00
+    push [boot_drive]	;pass boot_drive to stage 2
+
+    jmp 0x7E00		;stage 2 location
 
 halt:
     hlt
@@ -44,11 +48,13 @@ error:
 
 DAP:
     .size:		db 0x10
-    .unused:		db 0
-    .sectors:		dw 16
+			db 0
+    .count:		dw 16
     .offset:		dw 0x7E00
     .segment:		dw 0
     .start_sector:	dq 1
+
+boot_drive: dw 0
 
 times 510 - ($ - $$) db 0		;pad the file with 0
 dw 0xAA55				;place the boot signature at byte 510 and 511

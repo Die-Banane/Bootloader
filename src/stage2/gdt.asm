@@ -1,11 +1,16 @@
 BITS 16
 
+section .rodata
 gdtr:
-    dw (.gdt_end - .gdt_start) + 8 - 1
-    dd .gdt_start - 8	;subtract 8 to place the pointer one entry before the code entry (null descriptor)
+    dw (gdt.end - gdt.start) - 1
+    dd gdt.start
 
-.gdt_start:
-    .code:
+gdt:
+.start:
+    ;NULL descriptor
+    dq 0
+
+    ;32 bit code segment
     dw 0xffff		;low 16 bits-limit
     dw 0x0000		;low 16 bits-base
     db 0x00		;mid 8 bits-base
@@ -13,11 +18,28 @@ gdtr:
     db 0b11001111	;Flags (G-DB-L-reserved) | high 4 bits-limit
     db 0x00		;high 8 bits-base
 
-    .data:
+    ;32 bit data segment
     dw 0xffff		;low 16 bits-limit
     dw 0x0000		;low 16 bits-base
     db 0x00		;mid 8 bits-base
     db 0b10010010	;Access byte (P-DPL-S-E-DC-RW-A)
     db 0b11001111	;Flags (G-DB-L-reserved) | high 4 bits-limit
     db 0x00		;high 8 bits-base
-.gdt_end:
+
+    ; 16 bit code segment
+    dw 0xffff		;low 16 bits-limit
+    dw 0x0000		;low 16 bits-base
+    db 0x00		;mid 8 bits-base
+    db 0b10011010	;Access byte (P-DPL-S-E-DC-RW-A)
+    db 0b00001111	;Flags (G-DB-L-reserved) | high 4 bits-limit
+    db 0x00		;high 8 bits-base
+
+    ;16 bit data segment
+    dw 0xffff		;low 16 bits-limit
+    dw 0x0000		;low 16 bits-base
+    db 0x00		;mid 8 bits-base
+    db 0b10010010	;Access byte (P-DPL-S-E-DC-RW-A)
+    db 0b00001111	;Flags (G-DB-L-reserved) | high 4 bits-limit
+    db 0x00		;high 8 bits-base
+
+.end:

@@ -10,8 +10,8 @@ always:
 
 image: always stage1 stage2
 	dd if=/dev/zero of=$(BUILD_DIR)/disk.img bs=512 count=2048
-	dd if=$(BUILD_DIR)/stage1.bin of=$(BUILD_DIR)/disk.img bs=512 conv=notrunc seek=0
-	dd if=$(BUILD_DIR)/stage2.bin of=$(BUILD_DIR)/disk.img bs=512 conv=notrunc seek=1
+	dd if=$(BUILD_DIR)/stage1.bin of=$(BUILD_DIR)/disk.img conv=notrunc bs=512 seek=0
+	dd if=$(BUILD_DIR)/stage2.bin of=$(BUILD_DIR)/disk.img conv=notrunc bs=512 seek=1
 
 stage1: always
 	$(MAKE) -C $(SRC_DIR)/stage1 BUILD_DIR=$(abspath $(BUILD_DIR))
