@@ -1,10 +1,11 @@
 #pragma once
 #include <stdint.h>
+#include <stdarg.h>
 
 #define ROWS 25
 #define COLS 80
 
-enum colors {
+typedef enum colors {
     BLACK,
     BLUE,
     GREEN,
@@ -21,7 +22,8 @@ enum colors {
     LIGHT_MAGENTA,
     YELLOW,
     WHITE
-};
+} Color;
 
-void Puts(int x, int y, uint8_t foreground, uint8_t background, const char *msg);
+void Puts(int x, int y, Color foreground, Color background, const char *msg);
 void ClearScreen(void);
+void Printf(int x, int y, Color foreground, Color background, const char *fmt, ...);

@@ -1,19 +1,3 @@
-; Convert linear address to segment:offset address
-; Args:
-;    1 - linear address
-;    2 - (out) target segment (e.g. es)
-;    3 - target 32-bit register to use (e.g. eax)
-;    4 - target lower 16-bit half of #3 (e.g. ax)
-%macro LinearToSegOffset 4
-
-    mov %3, %1      ; linear address to eax
-    shr %3, 4
-    mov %2, %4
-    mov %3, %1      ; linear address to eax
-    and %3, 0xf
-
-%endmacro
-
 global BiosReadDisk
 
 
@@ -30,10 +14,10 @@ BiosReadDisk:
     mov [stack_seg], ss
     mov [stack_ptr], esp
 
-    mov dl, [ebp + 8]				;arg1 - drive
-    mov ebx, [ebp + 12]				;arg2 - dap pointer
+    mov dl, [ebp + 8]	;arg1 - drive
+    mov ebx, [ebp + 12]	;arg2 - dap pointer
 
-    jmp 0x18:.pm16				;0x18: 16 bit code segment
+    jmp 0x18:.pm16	;0x18: 16 bit code segment
 
 .pm16:
 [BITS 16]
@@ -44,17 +28,17 @@ BiosReadDisk:
 
     jmp 0:.rm
 
+.rm:
+    mov esi, ebx
+    shr esi, 4		;convert the lba pointer to format seg:off (ds:si)
+    mov ds, si
+
+    and ebx, 0xf
+    mov esi, ebx
+
 ;initialize segments
 ;skip ds because es:di
 ;points to the dap
-.rm:
-    mov si, bx
-    shr si, 4
-    mov ds, si
-
-    and bx, 0xf
-    mov si, bx
-
     xor ax, ax
     mov es, ax
     mov ss, ax
