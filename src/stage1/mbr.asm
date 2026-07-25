@@ -56,5 +56,6 @@ DAP:
 
 boot_drive: dw 0
 
-times 510 - ($ - $$) db 0		;pad the file with 0
-dw 0xAA55				;place the boot signature at byte 510 and 511
+;times 0x1b0 - ($ - $$) db 0	;pad the file with 0
+times 510 - ($ - $$) db 0
+dw 0xAA55
