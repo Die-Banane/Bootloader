@@ -34,7 +34,9 @@ main:
     int 0x13
     jc error
 
-    push [boot_drive]	;pass boot_drive to stage 2
+    xor ax, ax
+    mov al, [boot_drive]
+    push ax			;pass boot_drive to stage 2 (zero-extended 16 bit)
 
     jmp 0x7E00		;stage 2 location
 
@@ -54,8 +56,7 @@ DAP:
     .segment:		dw 0
     .start_sector:	dq 1
 
-boot_drive: dw 0
+boot_drive: db 0
 
-;times 0x1b0 - ($ - $$) db 0	;pad the file with 0
 times 510 - ($ - $$) db 0
 dw 0xAA55

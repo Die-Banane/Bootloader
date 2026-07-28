@@ -94,7 +94,9 @@ void Printf(int x, int y, Color foreground, Color background, const char *fmt, .
 	    case 'x': {
 		unsigned int val = va_arg(args, unsigned int);
 		char tmp[16];
-		UintToStr(tmp, val, 16);
+		tmp[0] = '0';
+		tmp[1] = 'x';
+		UintToStr(tmp + 2, val, 16);
 		for (char *s = tmp; *s && pos < (int)sizeof(buf) - 1; s++)
 		    buf[pos++] = *s;
 		break;

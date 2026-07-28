@@ -11,6 +11,7 @@ BiosReadDisk:
     push ebp
     mov ebp, esp
     push ebx
+    push esi
 
     mov [stack_seg], ss
     mov [stack_ptr], esp
@@ -73,6 +74,7 @@ BiosReadDisk:
     mov eax, 1
     sbb eax, 0
 
+    pop esi
     pop ebx
     pop ebp
     ret

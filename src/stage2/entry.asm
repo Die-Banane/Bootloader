@@ -1,15 +1,17 @@
 BITS 16
 
 extern c_main
+extern _size
 global entry
 
 section .data
 ebda_start: dd 0
-boot_drive: dw 0	;16 bit for alignment
+boot_drive: db 0
 
 section .text
 entry:
-    pop [boot_drive]
+    pop ax
+    mov [boot_drive], al
    
 ;get the starting address of EBDA
     xor eax, eax
@@ -43,7 +45,9 @@ pm_entry:
     mov ss, ax
     mov esp, [ebda_start]
 
-    push word [boot_drive]
+    movzx eax, byte [boot_drive]
+    push eax
+    push _size
     call c_main
 
 pm_halt:

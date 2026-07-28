@@ -2,10 +2,10 @@
 #include "bios.h"
 #include "io.h"
 
-void __attribute__((cdecl)) c_main(uint16_t boot_drive)
+void __attribute__((cdecl)) c_main(uint32_t size, uint8_t boot_drive)
 {
     ClearScreen();
-    Printf(0, 0, BLACK, WHITE, "booted from drive %x", boot_drive);
+    Printf(0, 0, BLACK, WHITE, "booted from drive: %x size of the loader is: %x", boot_drive, size);
 
     int linear		= 0x10000;
     uint32_t count	= 1;
