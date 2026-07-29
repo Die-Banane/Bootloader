@@ -5,7 +5,7 @@ extern _size
 global entry
 
 section .data
-ebda_start: dd 0
+space: dw 0
 boot_drive: db 0
 
 section .text
@@ -14,10 +14,9 @@ entry:
     mov [boot_drive], al
    
 ;get the starting address of EBDA
-    xor eax, eax
+    xor ax, ax
     int 0x12
-    shl eax, 10
-    mov [ebda_start], eax
+    mov [space], ax
     
     call enable_a20
     cmp ax, 1
@@ -43,11 +42,14 @@ pm_entry:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov esp, [ebda_start]
 
     movzx eax, byte [boot_drive]
+    movzx ebx, word [space]
+
     push eax
+    push ebx
     push _size
+
     call c_main
 
 pm_halt:

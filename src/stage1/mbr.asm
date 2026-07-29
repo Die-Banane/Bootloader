@@ -38,7 +38,7 @@ main:
     mov al, [boot_drive]
     push ax			;pass boot_drive to stage 2 (zero-extended 16 bit)
 
-    jmp 0x7E00		;stage 2 location
+    jmp 0x7E00			;stage 2 location
 
 halt:
     hlt

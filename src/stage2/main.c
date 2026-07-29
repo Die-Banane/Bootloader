@@ -2,10 +2,15 @@
 #include "bios.h"
 #include "io.h"
 
-void __attribute__((cdecl)) c_main(uint32_t size, uint8_t boot_drive)
+void __attribute__((cdecl)) c_main(uint32_t size, uint16_t space, uint8_t boot_drive)
 {
+    int ebdaStart = space * 1024;
+    int spaceLeft = ebdaStart - (STAGE2_POS + size); //space left in bytes
+
     ClearScreen();
-    Printf(0, 0, BLACK, WHITE, "booted from drive: %x size of the loader is: %x", boot_drive, size);
+    Printf(0, 0, WHITE, BLACK, "booted from drive: %x", boot_drive);
+    Printf(0, 1, WHITE, BLACK, "size of the loader is: %x", size);
+    Printf(0, 2, WHITE, BLACK, "EBDA starts at %x, space left is: ~%dk", ebdaStart, spaceLeft / 1024);
 
     int linear		= 0x10000;
     uint32_t count	= 1;
@@ -15,14 +20,14 @@ void __attribute__((cdecl)) c_main(uint32_t size, uint8_t boot_drive)
 
     if (!p)
     {
-        Puts(0, 2, RED, WHITE, "disk read failed");
+        Puts(0, 3, RED, WHITE, "disk read failed");
 	goto err;
     }
 
     if (p[510] == 0x55 && p[511] == 0xAA)
-	Puts(0, 1, GREEN, WHITE, "klasse");
+	Puts(0, 3, GREEN, WHITE, "klasse");
     else
-	Puts(0, 1, RED, WHITE, "doof");
+	Puts(0, 3, RED, WHITE, "doof");
 
 err:
     for (;;)

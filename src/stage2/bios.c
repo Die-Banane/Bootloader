@@ -3,14 +3,24 @@
 #include "io.h"
 
 
-static void LinearToSegOff(uint16_t *seg, uint16_t *off, int lba)
+static void LinearToSegOff(uint16_t *seg, uint16_t *off, int linear)
 {
-    *seg = lba / 16;
-    *off = lba % 16;
+    if (linear / 16 > 0xffff)
+    {
+	*seg = 0xffff;
+	*off = linear - (*seg * 0x10);
+    }
+    else
+    {
+	*seg = linear / 16;
+	*off = linear % 16;
+    }	
 }
 
 void* ReadDisk(uint8_t drive, int linear, uint16_t count, uint64_t sector)
 {
+    if (linear + count * SECTOR_SIZE > RM_MAX) return NULL;
+
     //IMPORTANT: NEVER PLACE DAP IN HIGH MEMORY 
     //BiosReadDisk WILL FAIL!!!!!
     static volatile Dap *DAP = (Dap*)DAP_ADR;

@@ -28,4 +28,8 @@ stage2: always
 clean:
 	rm -rf $(BUILD_DIR)/*
 
-.PHONY: all clean always stage1 stage2
+run: all
+	qemu-system-x86_64 -drive file=build/disk.img,format=raw,if=ide,index=0,media=disk \
+	-d int,cpu_reset -no-reboot
+
+.PHONY: all clean run always stage1 stage2

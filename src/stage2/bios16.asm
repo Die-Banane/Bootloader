@@ -10,6 +10,7 @@ section .text
 BiosReadDisk:
     push ebp
     mov ebp, esp
+
     push ebx
     push esi
 
@@ -44,7 +45,7 @@ BiosReadDisk:
     xor ax, ax
     mov es, ax
     mov ss, ax
-    mov sp, 0x7C00	;temporary stack
+    mov sp, 0x7E00
 
     stc
     mov ah, 0x42
