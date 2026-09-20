@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include "io.h"
 
 volatile uint16_t *vga = (uint16_t*)0xb8000;
@@ -83,7 +84,7 @@ void Printf(int x, int y, Color foreground, Color background, const char *fmt, .
 		break;
 	    }
 	    case 'u': {
-		unsigned int val = va_arg(args, unsigned int);
+		size_t val = va_arg(args, unsigned int);
 		char tmp[16];
 		UintToStr(tmp, val, 10);
 		for (char *s = tmp; *s && pos < (int)sizeof(buf) - 1; s++)

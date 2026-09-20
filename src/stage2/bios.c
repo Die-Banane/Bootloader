@@ -1,32 +1,31 @@
 #include <stdint.h>
+#include <stddef.h>
 #include "bios.h"
-#include "io.h"
 
-
-static void LinearToSegOff(uint16_t *seg, uint16_t *off, int linear)
+static void LinearToSegOff(uint16_t *seg, uint16_t *off, int destLba)
 {
-    if (linear / 16 > 0xffff)
+    if (destLba / 16 > 0xffff)
     {
 	*seg = 0xffff;
-	*off = linear - (*seg * 0x10);
+	*off = destLba - (*seg * 0x10);
     }
     else
     {
-	*seg = linear / 16;
-	*off = linear % 16;
+	*seg = destLba / 16;
+	*off = destLba % 16;
     }	
 }
 
-void* ReadDisk(uint8_t drive, int linear, uint16_t count, uint64_t sector)
+void* ReadDisk(uint8_t drive, uint16_t count, uint64_t sector, int destLba)
 {
-    if (linear + count * SECTOR_SIZE > RM_MAX) return NULL;
+    if (destLba + count * SECTOR_SIZE > RM_MAX) return NULL;
 
     //IMPORTANT: NEVER PLACE DAP IN HIGH MEMORY 
     //BiosReadDisk WILL FAIL!!!!!
     static volatile Dap *DAP = (Dap*)DAP_ADR;
 
     uint16_t seg, off;
-    LinearToSegOff(&seg, &off, linear);
+    LinearToSegOff(&seg, &off, destLba);
     uint32_t dest = (seg << 16) | off;
 
     DAP->size 		= 16;
@@ -36,7 +35,7 @@ void* ReadDisk(uint8_t drive, int linear, uint16_t count, uint64_t sector)
     DAP->sector 	= sector;
 
     if (BiosReadDisk(drive, DAP))
-        return (void*)(uintptr_t)linear;
+        return (void*)(uintptr_t)destLba;
     else
         return NULL;
 }

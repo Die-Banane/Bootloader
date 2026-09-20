@@ -2,8 +2,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#define NULL 0
-
 #define ROWS 25
 #define COLS 80
 
