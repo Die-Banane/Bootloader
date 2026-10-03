@@ -51,6 +51,10 @@ BiosReadDisk:
     mov ah, 0x42
     int 0x13
 
+;stash the status code in ebx, eax is clobbered by the cr0 access below.
+;ebx and esi are restored from the stack at the end of this function
+    movzx ebx, ah
+
 ;go back to pm
     cli
     mov eax, cr0
@@ -72,8 +76,8 @@ BiosReadDisk:
 
     mov esp, [stack_ptr]
 
-    mov eax, 1
-    sbb eax, 0
+;return the status code the bios put in ah
+    mov eax, ebx
 
     pop esi
     pop ebx

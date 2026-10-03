@@ -1,28 +1,110 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include "io.h"
+#include <memory.h>
+#include <io.h>
 
-volatile uint16_t *vga = (uint16_t*)0xb8000;
+volatile uint16_t *vga = (uint16_t*)VGA_POS;
 
-void Puts(int x, int y, Color foreground, Color background, const char *msg)
+static int cursor_x;
+static int cursor_y;
+static Color foreground = WHITE;
+static Color background = BLACK;
+
+static uint16_t ColorAttr(Color fg, Color bg)
 {
-    if (x >= COLS || y >= ROWS) return;
+    return (uint16_t)(((bg << 4) | fg) << 8);
+}
 
-    uint8_t c;
-    
-    uint16_t color = (background << 4) | foreground;
+static void BlankRow(int y)
+{
+    uint16_t attr = ColorAttr(background, background);
 
-    int offset = COLS * y + x;
-    
-    for (int i = 0; (c = msg[i]) != '\0'; i++)
-	vga[offset + i] = ((color << 8) | c);
+    for (int x = 0; x < COLS; x++)
+	vga[COLS * y + x] = attr | ' ';
+}
+
+//shifts the whole screen up by one row, the caller is responsible for
+//leaving the cursor in the last row
+static void ScrollUp(void)
+{
+    for (int i = 0; i < (ROWS - 1) * COLS; i++)
+	vga[i] = vga[i + COLS];
+
+    BlankRow(ROWS - 1);
+}
+
+static void Putc(char c)
+{
+    switch (c)
+    {
+	case '\n':
+	    cursor_x = 0;
+	    cursor_y++;
+	    break;
+	case '\r':
+	    cursor_x = 0;
+	    break;
+	case '\t':
+	    cursor_x = (cursor_x + 8) & ~7;
+	    break;
+	default:
+	    vga[COLS * cursor_y + cursor_x] = ColorAttr(foreground, background) | c;
+	    cursor_x++;
+	    break;
+    }
+
+    //wrap around at the right margin
+    if (cursor_x >= COLS)
+    {
+	cursor_x = 0;
+	cursor_y++;
+    }
+
+    if (cursor_y >= ROWS)
+    {
+	cursor_y = ROWS - 1;
+	ScrollUp();
+    }
+}
+
+void SetCurPos(int x, int y)
+{
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= COLS) x = COLS - 1;
+    if (y >= ROWS) y = ROWS - 1;
+
+    cursor_x = x;
+    cursor_y = y;
+}
+
+void SetColor(Color fg, Color bg)
+{
+    foreground = fg;
+    background = bg;
 }
 
 void ClearScreen(void)
 {
-    for (int i = 0; i < ROWS * COLS; i++)
-	vga[i] = 0;
+    for (int y = 0; y < ROWS; y++)
+	BlankRow(y);
+
+    cursor_x = 0;
+    cursor_y = 0;
+}
+
+void Puts(const char *msg)
+{
+    for (int i = 0; msg[i] != '\0'; i++)
+	Putc(msg[i]);
+}
+
+void PutsAt(int x, int y, Color foreground, Color background, const char *msg)
+{
+    SetCurPos(x, y);
+    SetColor(foreground, background);
+    Puts(msg);
 }
 
 static void UintToStr(char *buf, unsigned int val, int base)
@@ -50,11 +132,14 @@ static void UintToStr(char *buf, unsigned int val, int base)
     }
 }
 
-void Printf(int x, int y, Color foreground, Color background, const char *fmt, ...)
+static void Emit(const char *buf, int len)
 {
-    va_list args;
-    va_start(args, fmt);
+    for (int i = 0; i < len; i++)
+	Putc(buf[i]);
+}
 
+static void Vprintf(const char *fmt, va_list args)
+{
     char buf[256];
     int pos = 0;
 
@@ -75,7 +160,8 @@ void Printf(int x, int y, Color foreground, Color background, const char *fmt, .
 		char tmp[16];
 		if (val < 0)
 		{
-		    buf[pos++] = '-';
+		    if (pos < (int)sizeof(buf) - 1)
+			buf[pos++] = '-';
 		    val = -val;
 		}
 		UintToStr(tmp, (unsigned)val, 10);
@@ -111,7 +197,8 @@ void Printf(int x, int y, Color foreground, Color background, const char *fmt, .
 	    }
 	    case 'c': {
 		char c = (char)va_arg(args, int);
-		buf[pos++] = c;
+		if (pos < (int)sizeof(buf) - 1)
+		    buf[pos++] = c;
 		break;
 	    }
 	    case 'p': {
@@ -125,18 +212,36 @@ void Printf(int x, int y, Color foreground, Color background, const char *fmt, .
 		break;
 	    }
 	    case '%':
-		buf[pos++] = '%';
+		if (pos < (int)sizeof(buf) - 1)
+		    buf[pos++] = '%';
 		break;
 	    default:
-		buf[pos++] = '%';
+		if (pos < (int)sizeof(buf) - 1)
+		    buf[pos++] = '%';
 		if (fmt[i] && pos < (int)sizeof(buf) - 1)
 		    buf[pos++] = fmt[i];
 		break;
 	}
     }
 
-    buf[pos] = '\0';
-    va_end(args);
+    Emit(buf, pos);
+}
 
-    Puts(x, y, foreground, background, buf);
+void Printf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    Vprintf(fmt, args);
+    va_end(args);
+}
+
+void PrintfAt(int x, int y, Color foreground, Color background, const char *fmt, ...)
+{
+    SetCurPos(x, y);
+    SetColor(foreground, background);
+
+    va_list args;
+    va_start(args, fmt);
+    Vprintf(fmt, args);
+    va_end(args);
 }

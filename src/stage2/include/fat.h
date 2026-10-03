@@ -1,24 +1,6 @@
 #pragma once
-#include <stddef.h>
-#include "io.h"
-
-struct TableEnt
-{
-    uint8_t 	active;
-    
-    //start of partition
-    uint8_t 	startingHead;
-    uint16_t 	start; //bits 0-5: starting sector bits 6-15: starting cylinder
-
-    uint8_t 	systemId;
-    
-    //end of partition
-    uint8_t 	endingHead;
-    uint16_t 	end; //bits 0-5: ending sector bits 6-15: ending cylinder
-
-    uint32_t 	startLba;
-    uint32_t 	totalSectors;
-} __attribute__((packed));
+#include <stdint.h>
+#include <filesystem.h>
 
 struct Ext16
 {
@@ -81,23 +63,58 @@ struct Bpb
     uint16_t	bootSignature;
 } __attribute__((packed));
 
-typedef enum
+struct DirEnt
 {
-    NOERR,
-    NOACTIVEPART,
-    NOBOOTSIG
-} ErrorType;
+    char	fileName[11];
+    uint8_t	attributes;
+    uint8_t	reserved;
+    uint16_t	creationTime;
+    uint16_t	creationDate;
+    uint16_t	lastAccessDate;
+    uint16_t	firstClusterHigh; //for FAT 12 and FAT 16 always 0
+    uint16_t	lastModTime;
+    uint16_t	lastModDate;
+    uint16_t	firstClusterLow;
+    uint32_t	size;
+} __attribute__((packed));
+
+struct longFile
+{
+    uint8_t	order;
+    char	firstChars[5];
+    uint8_t	attribute; //always 0x0F
+    uint8_t	type;
+    uint8_t	checksum;
+    char	middleChars[6];
+    uint16_t	zero; //always 0
+    char	finalChars[4];
+} __attribute__((packed));
 
 typedef enum
 {
-    FAT_NOTSUPPORTED,
+    READ_ONLY	= 0x01,
+    HIDDEN	= 0x02,
+    SYSTEM	= 0x04,
+    VOLUME_ID	= 0x08,
+    DIRECTORY	= 0x10,
+    ARCHIVE	= 0x20,
+    LFN		= READ_ONLY | HIDDEN | SYSTEM | VOLUME_ID
+} FAT_ATTRIBUTES;
+
+typedef enum
+{
+    FAT_NOT_SUPPORTED,
     FAT_UNKNOWN,
     FAT_12,
     FAT_16,
     FAT_32
 } FatType;
 
-struct TableEnt *GetActivePartition();
-void FatInit(uint8_t drive);
+typedef struct Fat
+{
+    FatType type;
+    FsErr err;
+} Fat;
+
+Fat FatInit(uint8_t drive, char **errMsg);
 FatType FatDetect(struct Bpb *bpb);
-void Error();
