@@ -1,38 +1,29 @@
-#include "filesystem.h"
-#include <stdint.h>
+#include <filesystem.h>
 #include <fat.h>
 #include <bios.h>
 #include <partition.h>
 
-
-Fat FatInit(uint8_t drive, char **errMsg)
+FsErr FatInit(uint8_t drive, FatType *type)
 {
+    *type = FAT_UNKNOWN;
+
     struct TableEnt *activeEnt = GetActivePartition();
     if (!activeEnt)
-    {
-	*errMsg = "error: fat: could not find an active partition on boot device";
-	return (Fat){ .type = FAT_UNKNOWN, .err = FS_NO_PARTITION };
-    }
+	return FS_NO_PARTITION;
 
     struct Bpb *bpb = ReadDisk(drive, 1, activeEnt->startLba, 0x500);
-    if (!bpb || bpb->bootSignature != BOOT_SIG)
-    {
-	*errMsg = "error: fat: vbr does not contain a valid boot signature";
-	return (Fat){.type = FAT_UNKNOWN, .err = FS_NO_FILESYSTEM };
-    }
+    if (!bpb || bpb->bootSignature != 9)
+	return FS_NO_BOOT_SIGNATURE;
 
-    FatType type = FatDetect(bpb);
-    switch (type)
+    *type = FatDetect(bpb);
+    switch (*type)
     {
 	case FAT_UNKNOWN:
-	    *errMsg = "err: fat: could not locate any FAT file system on active partition";
-	    return (Fat){ .type = FAT_UNKNOWN, .err = FS_NO_FILESYSTEM };
+	    return FS_NO_FILESYSTEM;
 	case FAT_NOT_SUPPORTED:
-	    *errMsg = "err: fat: active partition does not contain a supported FAT file system";
-	    return (Fat){ .type = FAT_NOT_SUPPORTED, .err = FS_NOT_SUPPORTED };
+	    return FS_NOT_SUPPORTED;
 	default:
-	    *errMsg = "";
-	    return (Fat){ .type = type, .err = FS_OK };
+	    return FS_OK;
     }
 }
 

@@ -2,19 +2,24 @@
 #include <fat.h>
 #include <filesystem.h>
 
-/*
- * Filesystem dispatch layer.
- * The public, filesystem-agnostic API (fsInit, fsReadFile, ...) will live here,
- * selected through a small ops table so main.c never has to know the
- * underlying filesystem type.
- */
-
 FsErr FsInit(uint8_t drive)
 {
-    char *errMsg = "";
-    Fat fat = FatInit(drive, &errMsg);
-    if (fat.err != FS_OK)
-	PrintfAt(0, 0, LIGHT_RED, BLACK, "%s", errMsg);
-    
-    return fat.err;
+    FatType type;
+
+    FsErr err = FatInit(drive, &type);
+    return err;
+}
+
+const char *FsErrStr(FsErr err)
+{
+    switch (err)
+    {
+	case FS_OK:			return "no error";
+	case FS_NO_PARTITION:		return "no active partition on boot device";
+	case FS_NO_FILESYSTEM:		return "no filesystem on active partition";
+	case FS_NOT_SUPPORTED:		return "filesystem not supported";
+	case FS_FILE_NOT_FOUND:		return "file not found";
+	case FS_NO_BOOT_SIGNATURE:	return "active partition does not contain a valid boot signature";
+	default:			return "unknown filesystem error";
+    }
 }

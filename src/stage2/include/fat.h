@@ -103,18 +103,12 @@ typedef enum
 
 typedef enum
 {
-    FAT_NOT_SUPPORTED,
+    FAT_NOT_SUPPORTED = 0,
     FAT_UNKNOWN,
     FAT_12,
     FAT_16,
     FAT_32
 } FatType;
 
-typedef struct Fat
-{
-    FatType type;
-    FsErr err;
-} Fat;
-
-Fat FatInit(uint8_t drive, char **errMsg);
+FsErr FatInit(uint8_t drive, FatType *type);
 FatType FatDetect(struct Bpb *bpb);
