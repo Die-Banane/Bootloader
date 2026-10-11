@@ -4,24 +4,16 @@
 #include <memory.h>
 #include <io.h>
 
-volatile uint16_t *vga = (uint16_t*)VGA_POS;
+static volatile uint16_t *vga = (uint16_t*)VGA_POS;
 
-static int cursor_x;
-static int cursor_y;
-static Color foreground = WHITE;
-static Color background = BLACK;
-
-static uint16_t ColorAttr(Color fg, Color bg)
-{
-    return (uint16_t)(((bg << 4) | fg) << 8);
-}
+static int cursorX;
+static int cursorY;
+static uint16_t color = ((BLACK << 4) | WHITE) << 8;
 
 static void BlankRow(int y)
 {
-    uint16_t attr = ColorAttr(background, background);
-
     for (int x = 0; x < COLS; x++)
-	vga[COLS * y + x] = attr | ' ';
+	vga[COLS * y + x] = color | ' ';
 }
 
 //shifts the whole screen up by one row, the caller is responsible for
@@ -39,31 +31,31 @@ static void Putc(char c)
     switch (c)
     {
 	case '\n':
-	    cursor_x = 0;
-	    cursor_y++;
+	    cursorX = 0;
+	    cursorY++;
 	    break;
 	case '\r':
-	    cursor_x = 0;
+	    cursorX = 0;
 	    break;
 	case '\t':
-	    cursor_x = (cursor_x + 8) & ~7;
+	    cursorX= (cursorX + 8) & ~7;
 	    break;
 	default:
-	    vga[COLS * cursor_y + cursor_x] = ColorAttr(foreground, background) | c;
-	    cursor_x++;
+	    vga[COLS * cursorY + cursorX] = color | c;
+	    cursorX++;
 	    break;
     }
 
     //wrap around at the right margin
-    if (cursor_x >= COLS)
+    if (cursorX >= COLS)
     {
-	cursor_x = 0;
-	cursor_y++;
+	cursorX = 0;
+	cursorY++;
     }
 
-    if (cursor_y >= ROWS)
+    if (cursorY >= ROWS)
     {
-	cursor_y = ROWS - 1;
+	cursorY = ROWS - 1;
 	ScrollUp();
     }
 }
@@ -75,14 +67,13 @@ void SetCurPos(int x, int y)
     if (x >= COLS) x = COLS - 1;
     if (y >= ROWS) y = ROWS - 1;
 
-    cursor_x = x;
-    cursor_y = y;
+    cursorX = x;
+    cursorY = y;
 }
 
 void SetColor(Color fg, Color bg)
 {
-    foreground = fg;
-    background = bg;
+    color = (uint16_t)(((bg << 4) | fg) << 8);
 }
 
 void ClearScreen(void)
@@ -90,8 +81,8 @@ void ClearScreen(void)
     for (int y = 0; y < ROWS; y++)
 	BlankRow(y);
 
-    cursor_x = 0;
-    cursor_y = 0;
+    cursorX = 0;
+    cursorY = 0;
 }
 
 void Puts(const char *msg)

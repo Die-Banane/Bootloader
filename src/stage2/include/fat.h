@@ -1,4 +1,5 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 #include <filesystem.h>
 
@@ -110,5 +111,8 @@ typedef enum
     FAT_32
 } FatType;
 
-FsErr FatInit(uint8_t drive, FatType *type);
-FatType FatDetect(struct Bpb *bpb);
+void FatInit(uint8_t drive, struct Fs *fs, FsErr *err);
+
+void *Fat12ReadFile(const char *path, size_t size, uintptr_t dst, FsErr *err);
+void *Fat16ReadFile(const char *path, size_t size, uintptr_t dst, FsErr *err);
+void *Fat32ReadFile(const char *path, size_t size, uintptr_t dst, FsErr *err);

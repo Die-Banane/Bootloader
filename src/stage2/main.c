@@ -4,19 +4,15 @@
 void __attribute__((cdecl)) c_main(uint32_t size, uint16_t space, uint8_t bootDrive)
 {
     ClearScreen();
+    FsInit(bootDrive);
 
-    FsErr err = FsInit(bootDrive);
+    Printf("the loader is %d bytes big\n", size);
 
-    if (err != FS_OK)
-    {
-	SetColor(LIGHT_RED, BLACK);
-	const char *errStr = FsErrStr(err);
-	Printf("%s\n", errStr);
-	SetColor(WHITE, BLACK);
-    }
+    void *kernel = FsReadFile("path/to/kernel", 5000, 0x80000);
 
-    Printf("test\n");
-end:
+    if (!kernel)
+	Printf("oh nein\n");
+
     for (;;)
 	continue;
 }

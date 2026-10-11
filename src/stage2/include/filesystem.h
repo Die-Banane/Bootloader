@@ -12,6 +12,10 @@ typedef enum
     FS_NO_BOOT_SIGNATURE
 } FsErr;
 
-FsErr FsInit(uint8_t drive);
-FsErr FsReadFile(const char *path, size_t size, void *dst);
-const char *FsErrStr(FsErr err);
+struct Fs
+{
+    void *(*ReadFile)(const char *path, size_t size, uintptr_t dst, FsErr *err);
+};
+
+void FsInit(uint8_t drive);
+void *FsReadFile(const char *path, size_t size, uintptr_t dst);

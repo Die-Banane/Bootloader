@@ -1,46 +1,13 @@
-#include "io.h"
+#include <io.h>
 #include <memory.h>
 #include <bios.h>
 
-static void LinearToSegOff(uint16_t *seg, uint16_t *off, uintptr_t dst)
-{
-    if (dst / 16 > 0xffff)
-    {
-	*seg = 0xffff;
-	*off = dst - (*seg * 0x10);
-    }
-    else
-    {
-	*seg = dst / 16;
-	*off = dst % 16;
-    }	
-}
+#define LinearToSegOff(dst) \
+    ((dst) / 16 > 0xffff \
+	? (0xffff << 16) | ((dst) - (0xffff * 0x10)) \
+	: (((dst) / 16) << 16) | ((dst) % 16))
 
-void* ReadDisk(uint8_t drive, uint16_t count, uint64_t sector, uintptr_t dst)
-{
-    if (dst + count * SECTOR_SIZE > RM_MAX) return NULL;
-
-    //IMPORTANT: NEVER PLACE DAP IN HIGH MEMORY 
-    //BiosReadDisk WILL FAIL!!!!!
-    static volatile struct Dap *DAP = (struct Dap*)DAP_ADR;
-
-    uint16_t seg, off;
-    LinearToSegOff(&seg, &off, dst);
-    uint32_t dest = (seg << 16) | off;
-
-    DAP->size 		= 16;
-    DAP->reserved	= 0;
-    DAP->count 		= count;
-    DAP->dest 		= dest;
-    DAP->sector 	= sector;
-
-    if (BiosReadDisk(drive, DAP) == IO_OK)
-        return (void*)(uintptr_t)dst;
-    else
-        return NULL;
-}
-
-const char *IoErrStr(IoErr err)
+static const char *IoErrStr(IoErr err)
 {
     switch (err)
     {
@@ -82,3 +49,39 @@ const char *IoErrStr(IoErr err)
 	default:				return "unknown bios error";
     }
 }
+
+
+void* ReadDisk(uint8_t drive, uint16_t count, uint64_t sector, uintptr_t dst)
+{
+    if (dst + count * SECTOR_SIZE > RM_MAX) return NULL;
+
+    //IMPORTANT: NEVER PLACE DAP IN HIGH MEMORY 
+    //BiosReadDisk WILL FAIL!!!!!
+    static volatile struct Dap *DAP = (struct Dap*)DAP_ADR;
+
+    //uint16_t seg, off;
+    //LinearToSegOff(&seg, &off, dst);
+    //uint32_t dest = (seg << 16) | off;
+    uint32_t dest = LinearToSegOff(dst);
+
+    DAP->size 		= 16;
+    DAP->reserved	= 0;
+    DAP->count 		= count;
+    DAP->dest 		= dest;
+    DAP->sector 	= sector;
+
+    IoErr err = BiosReadDisk(drive, DAP);
+    if (err == IO_OK)
+        return (void*)(uintptr_t)dst;
+    else
+    {
+	const char *errStr = IoErrStr(err);
+
+	SetColor(LIGHT_RED, BLACK);
+	Printf("%s", errStr);
+	SetColor(WHITE, BLACK);
+
+	return NULL;
+    }
+}
+

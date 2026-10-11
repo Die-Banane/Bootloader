@@ -7,4 +7,4 @@
 #define SECTOR_SIZE 512 //size of one sector in bytes
 #define VGA_POS 0xB8000
 
-void *Memcpy(void *dest, void *src, size_t size);
+void *Memcpy(void *dest, const void *src, size_t size);

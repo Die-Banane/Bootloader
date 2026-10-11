@@ -3,31 +3,7 @@
 #include <bios.h>
 #include <partition.h>
 
-FsErr FatInit(uint8_t drive, FatType *type)
-{
-    *type = FAT_UNKNOWN;
-
-    struct TableEnt *activeEnt = GetActivePartition();
-    if (!activeEnt)
-	return FS_NO_PARTITION;
-
-    struct Bpb *bpb = ReadDisk(drive, 1, activeEnt->startLba, 0x500);
-    if (!bpb || bpb->bootSignature != 9)
-	return FS_NO_BOOT_SIGNATURE;
-
-    *type = FatDetect(bpb);
-    switch (*type)
-    {
-	case FAT_UNKNOWN:
-	    return FS_NO_FILESYSTEM;
-	case FAT_NOT_SUPPORTED:
-	    return FS_NOT_SUPPORTED;
-	default:
-	    return FS_OK;
-    }
-}
-
-FatType FatDetect(struct Bpb *bpb)
+static FatType FatDetect(struct Bpb *bpb)
 {
     //exFat is not supported
     if (bpb->bytesPerSector == 0)
@@ -57,3 +33,47 @@ FatType FatDetect(struct Bpb *bpb)
 
     return type;
 }
+
+void FatInit(uint8_t drive, struct Fs *fs, FsErr *err)
+{
+    struct TableEnt *activeEnt = GetActivePartition();
+    if (!activeEnt)
+    {
+	*err = FS_NO_PARTITION;
+	return;
+    }
+
+    struct Bpb *bpb = ReadDisk(drive, 1, activeEnt->startLba, 0x500);
+    if (!bpb || bpb->bootSignature != BOOT_SIG)
+    {
+	*err = FS_NO_BOOT_SIGNATURE;
+	return;
+    }
+
+    FatType type = FatDetect(bpb);
+    switch (type)
+    {
+	case FAT_UNKNOWN:
+	    fs->ReadFile = NULL;
+	    *err = FS_NO_FILESYSTEM;
+	    return;
+
+	case FAT_NOT_SUPPORTED:
+	    fs->ReadFile = NULL;
+	    *err = FS_NOT_SUPPORTED;
+	    return;
+
+	case FAT_12:
+	    fs->ReadFile = Fat12ReadFile;
+	    return;
+
+	case FAT_16:
+	    fs->ReadFile = Fat16ReadFile;
+	    return;
+
+	case FAT_32:
+	    fs->ReadFile = Fat32ReadFile;
+	    return;
+    }
+}
+

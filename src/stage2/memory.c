@@ -1,11 +1,13 @@
 #include <stdint.h>
-#include <stddef.h>
 #include <memory.h>
 
-void *Memcpy(void *dest, void *src, size_t size)
+void *Memcpy(void *dst, const void *src, size_t size)
 {
-    for (size_t i = 0; i < size; i++)
-	((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+    uint8_t *dest = (uint8_t*)dst;
+    const uint8_t *source = (uint8_t*)src;
     
-    return dest;
+    for (size_t i = 0; i < size; i++)
+	dest[i] = source[i];
+
+    return dst;
 }

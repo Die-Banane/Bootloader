@@ -54,4 +54,3 @@ typedef enum
 
 void* ReadDisk(uint8_t drive, uint16_t count, uint64_t sector, uintptr_t dst);
 extern IoErr __attribute__((cdecl)) BiosReadDisk(uint8_t drive, volatile struct Dap *dap);
-const char *IoErrStr(IoErr err);
