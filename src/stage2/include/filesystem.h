@@ -17,5 +17,5 @@ struct Fs
     void *(*ReadFile)(const char *path, size_t size, uintptr_t dst, FsErr *err);
 };
 
-void FsInit(uint8_t drive);
+void FsInit(uint8_t drive, FsErr *err);
 void *FsReadFile(const char *path, size_t size, uintptr_t dst);

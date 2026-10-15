@@ -69,6 +69,7 @@ struct DirEnt
     char	fileName[11];
     uint8_t	attributes;
     uint8_t	reserved;
+    uint8_t	creationTimeTenth;
     uint16_t	creationTime;
     uint16_t	creationDate;
     uint16_t	lastAccessDate;

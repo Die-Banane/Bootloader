@@ -20,18 +20,16 @@ static const char *FsErrStr(FsErr err)
     }
 }
 
-void FsInit(uint8_t drive)
+void FsInit(uint8_t drive, FsErr *err)
 {
-    FsErr err = FS_OK;
+    FatInit(drive, &fs, err);
 
-    FatInit(drive, &fs, &err);
-
-    if (err != FS_OK)
+    if (*err != FS_OK)
     {
-	const char *errStr = FsErrStr(err);
+	const char *errStr = FsErrStr(*err);
 
 	SetColor(LIGHT_RED, BLACK);
-	Printf("%s", errStr);
+	Printf("FsInit: %s", errStr);
 	SetColor(WHITE, BLACK);
     }
 }
@@ -39,8 +37,15 @@ void FsInit(uint8_t drive)
 void *FsReadFile(const char *path, size_t size, uintptr_t dst)
 {
     FsErr err = FS_OK;
-
-    void *ptr = fs.ReadFile(path, size, dst, &err);
+    void *ptr;
+    
+    if (!fs.ReadFile)
+    {
+	ptr = NULL;
+	err = -1;
+    }
+    else
+	ptr = fs.ReadFile(path, size, dst, &err);
 
     if (err != FS_OK)
     {

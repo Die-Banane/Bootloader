@@ -65,14 +65,17 @@ void FatInit(uint8_t drive, struct Fs *fs, FsErr *err)
 
 	case FAT_12:
 	    fs->ReadFile = Fat12ReadFile;
+	    *err = FS_OK;
 	    return;
 
 	case FAT_16:
 	    fs->ReadFile = Fat16ReadFile;
+	    *err = FS_OK;
 	    return;
 
 	case FAT_32:
 	    fs->ReadFile = Fat32ReadFile;
+	    *err = FS_OK;
 	    return;
     }
 }
