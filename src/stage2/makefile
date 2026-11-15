@@ -27,7 +27,8 @@ C_OBJECTS	:= $(BUILD_DIR)/main.o \
 		   $(BUILD_DIR)/fat12.o \
 		   $(BUILD_DIR)/fat16.o \
 		   $(BUILD_DIR)/fat32.o \
-		   $(BUILD_DIR)/partition.o
+		   $(BUILD_DIR)/partition.o \
+		   $(BUILD_DIR)/memory.o
 
 ASM_OBJECTS	:= $(BUILD_DIR)/entry.o \
 		   $(BUILD_DIR)/bios16.o
@@ -50,7 +51,7 @@ $(BUILD_DIR)/bios.o: bios.c
 	$(CC) $(CFLAGS) -c bios.c -o $@
 
 $(BUILD_DIR)/io.o: io.c
-	$(CC) $(CFLAGS) -c io.c -o $@
+	$(CC) $(CFLAGS) -Os -c io.c -o $@
 
 $(BUILD_DIR)/fs.o: fs/fs.c
 	$(CC) $(CFLAGS) -c fs/fs.c -o $@
@@ -70,6 +71,8 @@ $(BUILD_DIR)/fat32.o: fs/fat/fat32.c
 $(BUILD_DIR)/partition.o: fs/partition.c
 	$(CC) $(CFLAGS) -c fs/partition.c -o $@
 
+$(BUILD_DIR)/memory.o: memory.c
+	$(CC) $(CFLAGS) -c memory.c -o $@
 
 $(BUILD_DIR)/entry.o: entry.asm a20.asm gdt.asm
 	$(ASM) entry.asm -o $@
@@ -90,6 +93,7 @@ $(ELF): $(OBJECTS)
 	      $(BUILD_DIR)/fat16.o \
 	      $(BUILD_DIR)/fat32.o \
 	      $(BUILD_DIR)/partition.o \
+	      $(BUILD_DIR)/memory.o \
 	      -o $@ $(LDFLAGS)
 
 

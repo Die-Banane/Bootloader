@@ -1,4 +1,6 @@
-#pragma once
+#ifndef FILESYSTEM_H
+#define FILESYSTEM_H
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -9,7 +11,8 @@ typedef enum
     FS_NO_FILESYSTEM,
     FS_NOT_SUPPORTED,
     FS_FILE_NOT_FOUND,
-    FS_NO_BOOT_SIGNATURE
+    FS_NO_BOOT_SIGNATURE,
+    FS_IO_ERROR
 } FsErr;
 
 struct Fs
@@ -19,3 +22,5 @@ struct Fs
 
 void FsInit(uint8_t drive, FsErr *err);
 void *FsReadFile(const char *path, size_t size, uintptr_t dst);
+
+#endif

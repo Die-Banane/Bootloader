@@ -51,7 +51,7 @@ error:
 DAP:
     .size:		db 0x10
 			db 0
-    .count:		dw 16
+    .count:		dw 24
     .offset:		dw 0x7E00
     .segment:		dw 0
     .start_sector:	dq 1

@@ -12,7 +12,7 @@ static const char *IoErrStr(IoErr err)
     switch (err)
     {
 	case IO_INVALID_FUNCTION:		return "invalid function or parameter";
-	case IO_ADDRESS_MARK_NOT_FOUND:	return "address mark not found";
+	case IO_ADDRESS_MARK_NOT_FOUND:		return "address mark not found";
 	case IO_WRITE_PROTECTED:		return "disk write protected";
 	case IO_SECTOR_NOT_FOUND:		return "sector not found";
 	case IO_RESET_FAILED:			return "reset failed";
@@ -51,37 +51,46 @@ static const char *IoErrStr(IoErr err)
 }
 
 
-void* ReadDisk(uint8_t drive, uint16_t count, uint64_t sector, uintptr_t dst)
+void* ReadDisk(uint8_t drive, uint16_t count, uint64_t srcSector, uintptr_t dst)
 {
-    if (dst + count * SECTOR_SIZE > RM_MAX) return NULL;
+    if (count == 0) return (void*)dst;
+    if (dst > RM_MAX || count > (RM_MAX - dst) / SECTOR_SIZE) return NULL;
 
     //IMPORTANT: NEVER PLACE DAP IN HIGH MEMORY 
     //BiosReadDisk WILL FAIL!!!!!
     static volatile struct Dap *DAP = (struct Dap*)DAP_ADR;
 
-    //uint16_t seg, off;
-    //LinearToSegOff(&seg, &off, dst);
-    //uint32_t dest = (seg << 16) | off;
-    uint32_t dest = LinearToSegOff(dst);
+    uintptr_t cur = dst;
+    uint16_t left = count;
 
-    DAP->size 		= 16;
-    DAP->reserved	= 0;
-    DAP->count 		= count;
-    DAP->dest 		= dest;
-    DAP->sector 	= sector;
-
-    IoErr err = BiosReadDisk(drive, DAP);
-    if (err == IO_OK)
-        return (void*)(uintptr_t)dst;
-    else
+    while (left)
     {
-	const char *errStr = IoErrStr(err);
+	uint16_t chunk = left < MAX_READ_SECTORS
+	    ? left
+	    : MAX_READ_SECTORS;
+	
+	DAP->size 	= 16;
+	DAP->reserved	= 0;
+	DAP->count 	= chunk;
+	DAP->dest 	= LinearToSegOff(cur);
+	DAP->sector 	= srcSector;
 
-	SetColor(LIGHT_RED, BLACK);
-	Printf("%s", errStr);
-	SetColor(WHITE, BLACK);
+	IoErr err = BiosReadDisk(drive, DAP);
 
-	return NULL;
+	if (err != IO_OK)
+	{
+	    const char *errStr = IoErrStr(err);
+
+	    SetColor(LIGHT_RED, BLACK);
+	    Printf("%s\n", errStr);
+	    SetColor(WHITE, BLACK);
+	    return NULL;
+	}
+
+	left -= chunk;
+	srcSector += chunk;
+	cur += (uintptr_t)chunk * SECTOR_SIZE;
     }
-}
 
+    return (void*)dst;
+}

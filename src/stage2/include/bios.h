@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#define SECTOR_SIZE 512
+
 struct Dap
 {
     uint8_t	size;

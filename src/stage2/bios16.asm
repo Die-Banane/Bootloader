@@ -45,7 +45,7 @@ BiosReadDisk:
     xor ax, ax
     mov es, ax
     mov ss, ax
-    mov sp, 0x7E00
+    mov sp, 0x7C00
 
     stc
     mov ah, 0x42
