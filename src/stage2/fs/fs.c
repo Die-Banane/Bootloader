@@ -1,7 +1,8 @@
-#include <io.h>
+#include <console.h>
 #include <filesystem.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "fat/fat.h"
 
 static struct Fs fs;
@@ -29,7 +30,7 @@ void FsInit(uint8_t drive, FsErr *err)
 	const char *errStr = FsErrStr(*err);
 
 	SetColor(LIGHT_RED, BLACK);
-	Printf("FsInit: %s", errStr);
+	printf("FsInit: %s", errStr);
 	SetColor(WHITE, BLACK);
     }
 }
@@ -52,7 +53,7 @@ void *FsReadFile(const char *path, size_t size, uintptr_t dst)
 	const char *errStr = FsErrStr(err);
 
 	SetColor(LIGHT_RED, BLACK);
-	Printf("an error occurred while reading %s: %s\n", path, errStr);
+	printf("an error occurred while reading %s: %s\n", path, errStr);
 	SetColor(WHITE, BLACK);
     }
 

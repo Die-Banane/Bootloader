@@ -21,14 +21,14 @@ LDFLAGS		:= -T linker.ld
 
 C_OBJECTS	:= $(BUILD_DIR)/main.o \
 		   $(BUILD_DIR)/bios.o \
-		   $(BUILD_DIR)/io.o \
+		   $(BUILD_DIR)/console.o \
+		   $(BUILD_DIR)/stdio.o \
+		   $(BUILD_DIR)/string.o \
+		   $(BUILD_DIR)/ctype.o \
 		   $(BUILD_DIR)/fs.o \
 		   $(BUILD_DIR)/fat.o \
-		   $(BUILD_DIR)/fat12.o \
 		   $(BUILD_DIR)/fat16.o \
-		   $(BUILD_DIR)/fat32.o \
-		   $(BUILD_DIR)/partition.o \
-		   $(BUILD_DIR)/memory.o
+		   $(BUILD_DIR)/partition.o
 
 ASM_OBJECTS	:= $(BUILD_DIR)/entry.o \
 		   $(BUILD_DIR)/bios16.o
@@ -50,8 +50,17 @@ $(BUILD_DIR)/main.o: main.c
 $(BUILD_DIR)/bios.o: bios.c
 	$(CC) $(CFLAGS) -c bios.c -o $@
 
-$(BUILD_DIR)/io.o: io.c
-	$(CC) $(CFLAGS) -Os -c io.c -o $@
+$(BUILD_DIR)/console.o: console.c
+	$(CC) $(CFLAGS) -Os -c console.c -o $@
+
+$(BUILD_DIR)/stdio.o: stdio.c
+	$(CC) $(CFLAGS) -Os -c stdio.c -o $@
+
+$(BUILD_DIR)/string.o: string.c
+	$(CC) $(CFLAGS) -c string.c -o $@
+
+$(BUILD_DIR)/ctype.o: ctype.c
+	$(CC) $(CFLAGS) -c ctype.c -o $@
 
 $(BUILD_DIR)/fs.o: fs/fs.c
 	$(CC) $(CFLAGS) -c fs/fs.c -o $@
@@ -59,20 +68,11 @@ $(BUILD_DIR)/fs.o: fs/fs.c
 $(BUILD_DIR)/fat.o: fs/fat/fat.c
 	$(CC) $(CFLAGS) -c fs/fat/fat.c -o $@
 
-$(BUILD_DIR)/fat12.o: fs/fat/fat12.c
-	$(CC) $(CFLAGS) -c fs/fat/fat12.c -o $@
-
 $(BUILD_DIR)/fat16.o: fs/fat/fat16.c
 	$(CC) $(CFLAGS) -c fs/fat/fat16.c -o $@
 
-$(BUILD_DIR)/fat32.o: fs/fat/fat32.c
-	$(CC) $(CFLAGS) -c fs/fat/fat32.c -o $@
-
 $(BUILD_DIR)/partition.o: fs/partition.c
 	$(CC) $(CFLAGS) -c fs/partition.c -o $@
-
-$(BUILD_DIR)/memory.o: memory.c
-	$(CC) $(CFLAGS) -c memory.c -o $@
 
 $(BUILD_DIR)/entry.o: entry.asm a20.asm gdt.asm
 	$(ASM) entry.asm -o $@
@@ -86,14 +86,14 @@ $(ELF): $(OBJECTS)
 	      $(BUILD_DIR)/main.o \
 	      $(BUILD_DIR)/bios.o \
 	      $(BUILD_DIR)/bios16.o \
-	      $(BUILD_DIR)/io.o \
+	      $(BUILD_DIR)/console.o \
+	      $(BUILD_DIR)/stdio.o \
+	      $(BUILD_DIR)/string.o \
+	      $(BUILD_DIR)/ctype.o \
 	      $(BUILD_DIR)/fs.o \
 	      $(BUILD_DIR)/fat.o \
-	      $(BUILD_DIR)/fat12.o \
 	      $(BUILD_DIR)/fat16.o \
-	      $(BUILD_DIR)/fat32.o \
 	      $(BUILD_DIR)/partition.o \
-	      $(BUILD_DIR)/memory.o \
 	      -o $@ $(LDFLAGS)
 
 

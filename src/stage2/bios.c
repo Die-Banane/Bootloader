@@ -1,5 +1,6 @@
-#include <io.h>
+#include <console.h>
 #include <memory.h>
+#include <stdio.h>
 #include <bios.h>
 
 #define LinearToSegOff(dst) \
@@ -82,7 +83,7 @@ void* ReadDisk(uint8_t drive, uint16_t count, uint64_t srcSector, uintptr_t dst)
 	    const char *errStr = IoErrStr(err);
 
 	    SetColor(LIGHT_RED, BLACK);
-	    Printf("%s\n", errStr);
+	    printf("%s\n", errStr);
 	    SetColor(WHITE, BLACK);
 	    return NULL;
 	}

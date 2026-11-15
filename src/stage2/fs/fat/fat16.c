@@ -1,8 +1,9 @@
-#include <io.h>
 #include <stdbool.h>
-#include <bios.h>
-#include <memory.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <bios.h>
 #include "fat.h"
 #include "filesystem.h"
 
@@ -18,39 +19,6 @@ static struct
 
 static const struct FatVolume *vol;
 
-static int Toupper(int c)
-{
-    return (c >= 'a' && c <='z')
-	? c + ('A' - 'a')
-	: c;
-}
-
-static size_t Strlen(const char *str)
-{
-    size_t len = 0;
-
-    for(; *str; len++, str++) continue;
-    return len;
-}
-
-static int Strcmp(const char *s1, const char *s2)
-{
-    while (*s1 || *s2)
-    {
-	if (*s1 != *s2)
-	{
-	    return *s1 < *s2
-		? -1
-		: 1;
-	}
-
-	s1++;
-	s2++;
-    }
-
-    return 0;
-}
-
 static bool LoadCluster(uint16_t cluster, uintptr_t location)
 {
     uint64_t sector = ((cluster - 2) * vol->sectorsPerCluster) + vol->dataLba;
@@ -64,7 +32,7 @@ static bool LoadCluster(uint16_t cluster, uintptr_t location)
 static bool To83(const char *str, char out[12])
 {
     // length = name + extension + '.'
-    size_t len = Strlen(str);
+    size_t len = strlen(str);
     if (len > 8 + 3 + 1) return false;
 
     size_t remaining;
@@ -74,7 +42,7 @@ static bool To83(const char *str, char out[12])
     {
 	if (str[i] != '.')
 	{
-	    *name = Toupper(str[i]);
+	    *name = toupper(str[i]);
 	}
 	else
 	{
@@ -100,7 +68,7 @@ static bool To83(const char *str, char out[12])
 	    break;
 	}
 	    
-	*name = Toupper(*str);
+	*name = toupper(*str);
     }
 
     *name = '\0';
@@ -135,9 +103,9 @@ static struct DirEnt *GetEntry(const char *file, FsErr *err)
 	    //TODO: read long file entries correctly
 	    continue;
 
-	Memcpy(cFileName, current.fileName, sizeof(cFileName) / sizeof(cFileName[0]) - 1);
+	memcpy(cFileName, current.fileName, sizeof(cFileName) / sizeof(cFileName[0]) - 1);
 
-	if (Strcmp(cFileName, file83) == 0)
+	if (strcmp(cFileName, file83) == 0)
 	{
 	    *err = FS_OK;
 	    return &(rootDir.dir[i].ent);
@@ -155,7 +123,7 @@ static cluster_t FindNextCusterLBA(cluster_t currentCluster)
 
 void *Fat16ReadFile(const char *file, size_t size, uintptr_t dst, FsErr *err)
 {
-    Printf("reading %zu bytes from %s...\n", size, file);
+    printf("reading %zu bytes from %s...\n", size, file);
     if (size == 0) return NULL;
 
     struct DirEnt *ent = GetEntry(file, err);

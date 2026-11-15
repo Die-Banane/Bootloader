@@ -1,103 +1,13 @@
+/*
+ * this file is almost entirely vibe coded
+ */
 #include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <memory.h>
-#include <io.h>
-
-static volatile uint16_t *vga = (uint16_t*)VGA_POS;
-
-static int cursorX;
-static int cursorY;
-static uint16_t color = ((BLACK << 4) | WHITE) << 8;
-
-static void BlankRow(int y)
-{
-    for (int x = 0; x < COLS; x++)
-	vga[COLS * y + x] = color | ' ';
-}
-
-//shifts the whole screen up by one row, the caller is responsible for
-//leaving the cursor in the last row
-static void ScrollUp(void)
-{
-    for (int i = 0; i < (ROWS - 1) * COLS; i++)
-	vga[i] = vga[i + COLS];
-
-    BlankRow(ROWS - 1);
-}
-
-static void Putc(char c)
-{
-    switch (c)
-    {
-	case '\n':
-	    cursorX = 0;
-	    cursorY++;
-	    break;
-	case '\r':
-	    cursorX = 0;
-	    break;
-	case '\t':
-	    cursorX= (cursorX + 8) & ~7;
-	    break;
-	default:
-	    vga[COLS * cursorY + cursorX] = color | c;
-	    cursorX++;
-	    break;
-    }
-
-    //wrap around at the right margin
-    if (cursorX >= COLS)
-    {
-	cursorX = 0;
-	cursorY++;
-    }
-
-    if (cursorY >= ROWS)
-    {
-	cursorY = ROWS - 1;
-	ScrollUp();
-    }
-}
-
-void SetCurPos(int x, int y)
-{
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x >= COLS) x = COLS - 1;
-    if (y >= ROWS) y = ROWS - 1;
-
-    cursorX = x;
-    cursorY = y;
-}
-
-void SetColor(Color fg, Color bg)
-{
-    color = (uint16_t)(((bg << 4) | fg) << 8);
-}
-
-void ClearScreen(void)
-{
-    for (int y = 0; y < ROWS; y++)
-	BlankRow(y);
-
-    cursorX = 0;
-    cursorY = 0;
-}
-
-void Puts(const char *msg)
-{
-    for (int i = 0; msg[i] != '\0'; i++)
-	Putc(msg[i]);
-}
-
-void PutsAt(int x, int y, Color foreground, Color background, const char *msg)
-{
-    SetCurPos(x, y);
-    SetColor(foreground, background);
-    Puts(msg);
-}
+#include <stdio.h>
+#include <string.h>
+#include <console.h>
 
 /*
  * Formatted output.
@@ -107,21 +17,23 @@ void PutsAt(int x, int y, Color foreground, Color background, const char *msg)
  *   flags:      - + space 0 #
  *   width:      digits or *
  *   precision:  .digits or .*
- *   length:     hh h l ll z t
+ *   length:     hh h l ll j z t
  *   conversion: d i u o x X b c s p %
  *
- * %b is the usual non-standard binary extension. Floating point (%f, %e,
- * %g) and %n are deliberately unsupported: they would pull in soft float
- * or are simply a bad idea in a bootloader.
+ * %b is the C23 binary conversion. Floating point (%f, %e, %g, %a), %n and
+ * wide-character conversions (%lc, %ls) are deliberately unsupported: they
+ * would pull in soft float or locale/wide-char machinery, or are simply a
+ * bad idea in a bootloader.
  *
  * Output goes through a Sink so the same formatter can drive the VGA
- * console (Printf) or a caller supplied buffer (Snprintf).
+ * console (printf) or a caller supplied buffer (snprintf).
  */
 
 typedef struct
 {
     void (*write)(void *ctx, const char *s, size_t len);
     void *ctx;
+    size_t written;	//bytes emitted so far
 } Sink;
 
 typedef enum
@@ -131,6 +43,7 @@ typedef enum
     LEN_H,
     LEN_L,
     LEN_LL,
+    LEN_J,
     LEN_Z,
     LEN_T
 } Length;
@@ -147,9 +60,15 @@ typedef struct
     Length len;
 } Spec;
 
+static void SinkWrite(Sink *out, const char *s, size_t len)
+{
+    out->write(out->ctx, s, len);
+    out->written += len;
+}
+
 static void SinkChar(Sink *out, char c)
 {
-    out->write(out->ctx, &c, 1);
+    SinkWrite(out, &c, 1);
 }
 
 static void SinkRepeat(Sink *out, char c, int count)
@@ -165,7 +84,7 @@ static void EmitText(Sink *out, const char *s, size_t len, const Spec *spec)
     if (!spec->minus)
 	SinkRepeat(out, ' ', pad);
 
-    out->write(out->ctx, s, len);
+    SinkWrite(out, s, len);
 
     if (spec->minus)
 	SinkRepeat(out, ' ', pad);
@@ -236,8 +155,6 @@ static void EmitNumber(Sink *out, uint64_t magnitude, int base, bool upper,
 	    prefix[prefixLen++] = '0';
 	    prefix[prefixLen++] = upper ? 'X' : 'x';
 	}
-	else if (base == 8)
-	    prefix[prefixLen++] = '0';
 	else if (base == 2)
 	{
 	    prefix[prefixLen++] = '0';
@@ -246,6 +163,11 @@ static void EmitNumber(Sink *out, uint64_t magnitude, int base, bool upper,
     }
 
     int zeros = spec->prec > digitCount ? spec->prec - digitCount : 0;
+
+    //'#' for octal increases the precision just enough to force a leading
+    //zero, so it is not an extra prefix on top of the precision zeros
+    if (spec->hash && base == 8 && !isZero && zeros == 0)
+	zeros = 1;
     int total = prefixLen + zeros + digitCount;
     int pad = spec->width > total ? spec->width - total : 0;
 
@@ -255,7 +177,7 @@ static void EmitNumber(Sink *out, uint64_t magnitude, int base, bool upper,
     if (!spec->minus && !zeroPad)
 	SinkRepeat(out, ' ', pad);
 
-    out->write(out->ctx, prefix, (size_t)prefixLen);
+    SinkWrite(out, prefix, (size_t)prefixLen);
     SinkRepeat(out, '0', zeros);
 
     if (zeroPad)
@@ -288,6 +210,7 @@ static uint64_t FetchUnsigned(va_list *args, Length len)
 	case LEN_H:  return (unsigned short)va_arg(*args, unsigned int);
 	case LEN_L:  return va_arg(*args, unsigned long);
 	case LEN_LL: return va_arg(*args, unsigned long long);
+	case LEN_J:  return va_arg(*args, uintmax_t);
 	case LEN_Z:  return va_arg(*args, size_t);
 	case LEN_T:  return (uint64_t)va_arg(*args, ptrdiff_t);
 	default:     return va_arg(*args, unsigned int);
@@ -302,6 +225,7 @@ static int64_t FetchSigned(va_list *args, Length len)
 	case LEN_H:  return (short)va_arg(*args, int);
 	case LEN_L:  return va_arg(*args, long);
 	case LEN_LL: return va_arg(*args, long long);
+	case LEN_J:  return va_arg(*args, intmax_t);
 	case LEN_Z:  return (int32_t)va_arg(*args, size_t);
 	case LEN_T:  return va_arg(*args, ptrdiff_t);
 	default:     return va_arg(*args, int);
@@ -373,6 +297,7 @@ static const char *ParseSpec(const char *p, Spec *spec, va_list *args)
 	    if (p[1] == 'l') { spec->len = LEN_LL; p += 2; }
 	    else	     { spec->len = LEN_L;  p++;    }
 	    break;
+	case 'j': spec->len = LEN_J; p++; break;
 	case 'z': spec->len = LEN_Z; p++; break;
 	case 't': spec->len = LEN_T; p++; break;
 	default: break;
@@ -381,7 +306,7 @@ static const char *ParseSpec(const char *p, Spec *spec, va_list *args)
     return p;
 }
 
-static void Vformat(Sink *out, const char *fmt, va_list *args)
+static size_t Vformat(Sink *out, const char *fmt, va_list *args)
 {
     for (const char *p = fmt; *p != '\0'; p++)
     {
@@ -397,7 +322,7 @@ static void Vformat(Sink *out, const char *fmt, va_list *args)
 	if (*p == '\0')
 	{
 	    SinkChar(out, '%');
-	    return;
+	    return out->written;
 	}
 
 	switch (*p)
@@ -460,6 +385,8 @@ static void Vformat(Sink *out, const char *fmt, va_list *args)
 		break;
 	}
     }
+
+    return out->written;
 }
 
 static void VgaWrite(void *ctx, const char *s, size_t len)
@@ -470,10 +397,10 @@ static void VgaWrite(void *ctx, const char *s, size_t len)
 	Putc(s[i]);
 }
 
-static void Vprintf(const char *fmt, va_list args)
+int vprintf(const char *restrict fmt, va_list args)
 {
-    Sink out = { VgaWrite, NULL };
-    Vformat(&out, fmt, &args);
+    Sink out = { VgaWrite, NULL, 0 };
+    return (int)Vformat(&out, fmt, &args);
 }
 
 typedef struct
@@ -497,16 +424,16 @@ static void BufferWrite(void *ctx, const char *s, size_t len)
     if (len > room)
 	len = room;
 
-    Memcpy(buf->buf + buf->len, s, len);
+    memcpy(buf->buf + buf->len, s, len);
     buf->len += len;
 }
 
 //formats into dst like the C library, at most cap - 1 chars plus a
 //terminator, returns the length the full string would have had
-int Snprintf(char *dst, size_t cap, const char *fmt, ...)
+int snprintf(char *restrict dst, size_t cap, const char *restrict fmt, ...)
 {
     BufferSink buf = { dst, cap, 0, 0 };
-    Sink out = { BufferWrite, &buf };
+    Sink out = { BufferWrite, &buf, 0 };
 
     va_list args;
     va_start(args, fmt);
@@ -519,12 +446,14 @@ int Snprintf(char *dst, size_t cap, const char *fmt, ...)
     return (int)buf.total;
 }
 
-void Printf(const char *fmt, ...)
+int printf(const char *restrict fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    Vprintf(fmt, args);
+    int written = vprintf(fmt, args);
     va_end(args);
+
+    return written;
 }
 
 void PrintfAt(int x, int y, Color foreground, Color background, const char *fmt, ...)
@@ -534,6 +463,6 @@ void PrintfAt(int x, int y, Color foreground, Color background, const char *fmt,
 
     va_list args;
     va_start(args, fmt);
-    Vprintf(fmt, args);
+    vprintf(fmt, args);
     va_end(args);
 }

@@ -1,5 +1,6 @@
-#include "memory.h"
-#include <io.h>
+#include <string.h>
+#include <stdio.h>
+#include <console.h>
 #include <filesystem.h>
 
 void __attribute__((cdecl)) c_main(uint32_t size, uint16_t space, uint8_t bootDrive)
@@ -12,12 +13,12 @@ void __attribute__((cdecl)) c_main(uint32_t size, uint16_t space, uint8_t bootDr
 
     void *file = FsReadFile("foo.txt", 500 , 0x1000);
     char buf[4];
-    Memcpy(buf, file, 3);
+    memcpy(buf, file, 3);
     buf[3] = '\0';
-    Printf("%s", buf);
+    printf("%s", buf);
 
     if (file == NULL)
-	Printf("oh nein\n");
+	printf("oh nein\n");
 
 end:
     for (;;)
